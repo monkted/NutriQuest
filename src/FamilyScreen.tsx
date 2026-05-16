@@ -214,7 +214,7 @@ function MemberCircle({ size, progress, strokeWidth = 7, isSelf = false, animate
 }
 
 export default function FamilyScreen() {
-  const { role, goals, setGoals, entries, params, history, familyName, familyCode, familyMembers, currentUserName } = useApp();
+  const { role, goals, setGoals, entries, params, history, familyName, familyCode, familyMembers, currentUserName, currentUserId } = useApp();
 
   const [expandedGoals, setExpandedGoals] = useState<Set<string>>(() => new Set([goals[0]?.id]));
   const [showPastGoals, setShowPastGoals] = useState(false);
@@ -230,10 +230,10 @@ export default function FamilyScreen() {
   const weekPts  = calcWeekPoints(history, entries, params);
   const todayPts = calcTodayPoints(entries, params);
 
-  const currentAvatar = role === 'parent' ? '👩' : '🧒';
+  const currentMemberBase = familyMembers.find(m => m.id === currentUserId)!;
   const allMembers: (FamilyMember & { isDynamic?: boolean })[] = [
-    { id: 'u1', name: currentUserName, role, avatar: currentAvatar, weekPts, isDynamic: true },
-    ...familyMembers.filter(m => m.name !== currentUserName),
+    { ...currentMemberBase, weekPts, isDynamic: true },
+    ...familyMembers.filter(m => m.id !== currentUserId),
   ];
 
   const totalFamilyPts       = allMembers.reduce((s, m) => s + m.weekPts, 0);

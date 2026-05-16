@@ -47,14 +47,14 @@ function ConfettiParticle({ emoji, dx, dy, delay }: { emoji: string; dx: number;
 }
 
 export default function LeaderboardScreen() {
-  const { entries, params, history, goals, familyName, familyMembers, currentUserName, role } = useApp();
+  const { entries, params, history, goals, familyName, familyMembers, currentUserId, role } = useApp();
 
   const weekPts       = calcWeekPoints(history, entries, params);
-  const currentAvatar = role === 'parent' ? '👩' : '🧒';
+  const currentMember = familyMembers.find(m => m.id === currentUserId)!;
 
   const allMembers = [
-    { id: 'u1', name: currentUserName, avatar: currentAvatar, weekPts, isSelf: true },
-    ...familyMembers.map(m => ({ ...m, isSelf: false })),
+    { ...currentMember, weekPts, isSelf: true },
+    ...familyMembers.filter(m => m.id !== currentUserId).map(m => ({ ...m, isSelf: false })),
   ].sort((a, b) => b.weekPts - a.weekPts);
 
   const totalFamilyPts = allMembers.reduce((s, m) => s + m.weekPts, 0);

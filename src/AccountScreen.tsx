@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, Modal,
-  StyleSheet, SafeAreaView, Alert,
+  StyleSheet, SafeAreaView, Switch,
 } from 'react-native';
-import { useApp, TAB_BAR_HEIGHT } from './store';
+import {
+  useApp, TAB_BAR_HEIGHT, FamilyMember,
+  AGE_GROUPS, AGE_GROUP_LABEL, NUTRIENT_PRESETS,
+} from './store';
 import ParametersScreen from './ParametersScreen';
 
 const YELLOW = '#FFD60A';
@@ -11,13 +14,44 @@ const DARK   = '#1C1C1E';
 const BG     = '#F5F5F5';
 
 export default function AccountScreen() {
-  const { role, setRole, currentUserName, familyName, familyCode } = useApp();
+  const {
+    role, setRole, currentUserName, currentUserId,
+    familyName, familyCode, familyMembers, updateMember,
+    ageGroup, setAgeGroup,
+  } = useApp();
 
-  const [showParams, setShowParams] = useState(false);
+  const [showParams,      setShowParams]      = useState(false);
+  const [memberParamsId,  setMemberParamsId]  = useState<string | null>(null);
+  const [pickerMemberId,  setPickerMemberId]  = useState<string | null>(null);
+  const [showAgePicker,   setShowAgePicker]   = useState(false); // for own age picker
 
-  const avatar   = role === 'parent' ? '👩' : '🧒';
+  const avatar    = role === 'parent' ? '👩' : '🧒';
   const roleLabel = role === 'parent' ? 'Parent' : 'Kid';
   const roleColor = role === 'parent' ? '#5856D6' : '#34C759';
+
+  // Resolve which member's age group picker is acting on
+  const pickerMember = pickerMemberId ? familyMembers.find(m => m.id === pickerMemberId) : null;
+
+  const openMemberPicker = (m: FamilyMember) => {
+    setPickerMemberId(m.id);
+  };
+
+  const selectAgeForMember = (g: Parameters<typeof setAgeGroup>[0]) => {
+    if (pickerMemberId) {
+      updateMember(pickerMemberId, { ageGroup: g, params: NUTRIENT_PRESETS[g] });
+    }
+    setPickerMemberId(null);
+  };
+
+  const toggleMemberAuto = (m: FamilyMember, val: boolean) => {
+    updateMember(m.id, {
+      autoPreset: val,
+      params: val ? NUTRIENT_PRESETS[m.ageGroup] : m.params,
+    });
+  };
+
+  // All members except current user, for the family management section
+  const otherMembers = familyMembers.filter(m => m.id !== currentUserId);
 
   return (
     <SafeAreaView style={ac.root}>
@@ -61,14 +95,78 @@ export default function AccountScreen() {
           </View>
         </View>
 
+        {/* ── Family Members (parent only) ── */}
+        {role === 'parent' && (
+          <>
+            <Text style={ac.sectionLabel}>Family Members</Text>
+            <View style={ac.infoCard}>
+              {otherMembers.map((m, idx) => (
+                <React.Fragment key={m.id}>
+                  {idx > 0 && <View style={ac.divider} />}
+                  <View style={ac.memberRow}>
+                    {/* Avatar + name */}
+                    <View style={[ac.memberAvatar, { backgroundColor: m.role === 'kid' ? '#34C75922' : '#5856D622' }]}>
+                      <Text style={ac.memberAvatarEmoji}>{m.avatar}</Text>
+                    </View>
+                    <View style={ac.memberInfo}>
+                      <Text style={ac.memberName}>{m.name}</Text>
+                      {m.role === 'kid' ? (
+                        <TouchableOpacity onPress={() => openMemberPicker(m)} activeOpacity={0.7}>
+                          <View style={ac.ageChip}>
+                            <Text style={ac.ageChipText}>{AGE_GROUP_LABEL[m.ageGroup]} ›</Text>
+                          </View>
+                        </TouchableOpacity>
+                      ) : (
+                        <Text style={ac.memberRoleText}>Parent</Text>
+                      )}
+                    </View>
+
+                    {/* Auto toggle + settings chevron (kids only) */}
+                    {m.role === 'kid' && (
+                      <View style={ac.memberControls}>
+                        <View style={ac.memberAutoRow}>
+                          <Text style={ac.memberAutoLabel}>{m.autoPreset ? 'Auto-set' : 'Custom'}</Text>
+                          <Switch
+                            value={m.autoPreset}
+                            onValueChange={val => toggleMemberAuto(m, val)}
+                            trackColor={{ false: '#E5E5EA', true: '#34C759' }}
+                            thumbColor="#fff"
+                            style={{ transform: [{ scaleX: 0.85 }, { scaleY: 0.85 }] }}
+                          />
+                        </View>
+                        <TouchableOpacity
+                          style={ac.memberSettingsBtn}
+                          onPress={() => setMemberParamsId(m.id)}
+                          activeOpacity={0.7}
+                        >
+                          <Text style={ac.memberSettingsBtnText}>Details ›</Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                  </View>
+                </React.Fragment>
+              ))}
+            </View>
+          </>
+        )}
+
         {/* ── Settings ── */}
         <Text style={ac.sectionLabel}>Settings</Text>
         <View style={ac.infoCard}>
           <TouchableOpacity style={ac.settingRow} onPress={() => setShowParams(true)} activeOpacity={0.7}>
             <Text style={ac.settingIcon}>⚙️</Text>
             <View style={ac.settingText}>
-              <Text style={ac.settingLabel}>Nutrient Targets</Text>
+              <Text style={ac.settingLabel}>My Nutrient Targets</Text>
               <Text style={ac.settingSubLabel}>Set daily goals for points</Text>
+            </View>
+            <Text style={ac.settingArrow}>›</Text>
+          </TouchableOpacity>
+          <View style={ac.divider} />
+          <TouchableOpacity style={ac.settingRow} onPress={() => setShowAgePicker(true)} activeOpacity={0.7}>
+            <Text style={ac.settingIcon}>🎂</Text>
+            <View style={ac.settingText}>
+              <Text style={ac.settingLabel}>My Age Group</Text>
+              <Text style={ac.settingSubLabel}>{AGE_GROUP_LABEL[ageGroup]} · DRI preset</Text>
             </View>
             <Text style={ac.settingArrow}>›</Text>
           </TouchableOpacity>
@@ -120,18 +218,87 @@ export default function AccountScreen() {
 
       </ScrollView>
 
-      {/* Nutrient Targets Modal */}
+      {/* My Nutrient Targets Modal */}
       <Modal visible={showParams} animationType="slide">
         <SafeAreaView style={{ flex: 1, backgroundColor: BG }}>
           <View style={ac.modalNavBar}>
             <TouchableOpacity style={ac.modalBackBtn} onPress={() => setShowParams(false)}>
               <Text style={ac.modalBackText}>‹ Back</Text>
             </TouchableOpacity>
-            <Text style={ac.modalNavTitle}>Nutrient Targets</Text>
+            <Text style={ac.modalNavTitle}>My Targets</Text>
             <View style={{ width: 60 }} />
           </View>
           <ParametersScreen />
         </SafeAreaView>
+      </Modal>
+
+      {/* Per-member Nutrient Targets Modal */}
+      <Modal visible={!!memberParamsId} animationType="slide">
+        <SafeAreaView style={{ flex: 1, backgroundColor: BG }}>
+          <View style={ac.modalNavBar}>
+            <TouchableOpacity style={ac.modalBackBtn} onPress={() => setMemberParamsId(null)}>
+              <Text style={ac.modalBackText}>‹ Back</Text>
+            </TouchableOpacity>
+            <Text style={ac.modalNavTitle}>
+              {memberParamsId ? (familyMembers.find(m => m.id === memberParamsId)?.name ?? '') + "'s Targets" : ''}
+            </Text>
+            <View style={{ width: 60 }} />
+          </View>
+          {/* key forces remount (fresh draft) when switching between members */}
+          {memberParamsId && <ParametersScreen key={memberParamsId} memberId={memberParamsId} />}
+        </SafeAreaView>
+      </Modal>
+
+      {/* My Age Group Picker */}
+      <Modal visible={showAgePicker} animationType="fade" transparent>
+        <View style={ac.ageOverlay}>
+          <View style={ac.ageSheet}>
+            <Text style={ac.ageSheetTitle}>My Age Group</Text>
+            <Text style={ac.ageSheetSub}>Loads science-based nutrient targets</Text>
+            {AGE_GROUPS.map(g => (
+              <TouchableOpacity
+                key={g}
+                style={[ac.ageOption, ageGroup === g && ac.ageOptionActive]}
+                onPress={() => { setAgeGroup(g); setShowAgePicker(false); }}
+                activeOpacity={0.7}
+              >
+                <Text style={[ac.ageOptionText, ageGroup === g && ac.ageOptionTextActive]}>
+                  {AGE_GROUP_LABEL[g]}
+                </Text>
+                {ageGroup === g && <Text style={ac.ageCheck}>✓</Text>}
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity style={ac.ageCancelBtn} onPress={() => setShowAgePicker(false)} activeOpacity={0.7}>
+              <Text style={ac.ageCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Member Age Group Picker */}
+      <Modal visible={!!pickerMemberId} animationType="fade" transparent>
+        <View style={ac.ageOverlay}>
+          <View style={ac.ageSheet}>
+            <Text style={ac.ageSheetTitle}>{pickerMember?.name}'s Age Group</Text>
+            <Text style={ac.ageSheetSub}>Updates their nutrient targets automatically</Text>
+            {AGE_GROUPS.map(g => (
+              <TouchableOpacity
+                key={g}
+                style={[ac.ageOption, pickerMember?.ageGroup === g && ac.ageOptionActive]}
+                onPress={() => selectAgeForMember(g)}
+                activeOpacity={0.7}
+              >
+                <Text style={[ac.ageOptionText, pickerMember?.ageGroup === g && ac.ageOptionTextActive]}>
+                  {AGE_GROUP_LABEL[g]}
+                </Text>
+                {pickerMember?.ageGroup === g && <Text style={ac.ageCheck}>✓</Text>}
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity style={ac.ageCancelBtn} onPress={() => setPickerMemberId(null)} activeOpacity={0.7}>
+              <Text style={ac.ageCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </Modal>
     </SafeAreaView>
   );
@@ -162,6 +329,21 @@ const ac = StyleSheet.create({
   demoTag:     { backgroundColor: '#F2F2F7', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
   demoTagText: { fontSize: 10, fontWeight: '800', color: '#8E8E93', letterSpacing: 0.5 },
 
+  // Family member rows
+  memberRow:          { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12 },
+  memberAvatar:       { width: 46, height: 46, borderRadius: 23, alignItems: 'center', justifyContent: 'center' },
+  memberAvatarEmoji:  { fontSize: 24 },
+  memberInfo:         { flex: 1 },
+  memberName:         { fontSize: 15, fontWeight: '700', color: DARK, marginBottom: 4 },
+  memberRoleText:     { fontSize: 12, color: '#8E8E93' },
+  ageChip:            { alignSelf: 'flex-start', backgroundColor: DARK + '11', borderRadius: 10, paddingHorizontal: 9, paddingVertical: 3 },
+  ageChipText:        { fontSize: 12, fontWeight: '700', color: DARK },
+  memberControls:     { alignItems: 'flex-end', gap: 6 },
+  memberAutoRow:      { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  memberAutoLabel:    { fontSize: 11, fontWeight: '600', color: '#8E8E93' },
+  memberSettingsBtn:  { backgroundColor: BG, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 5 },
+  memberSettingsBtnText:{ fontSize: 12, fontWeight: '700', color: DARK },
+
   settingRow:      { flexDirection: 'row', alignItems: 'center', padding: 16, gap: 14 },
   settingIcon:     { fontSize: 22, width: 30, textAlign: 'center' },
   settingText:     { flex: 1 },
@@ -187,4 +369,16 @@ const ac = StyleSheet.create({
   modalBackBtn:   { width: 60 },
   modalBackText:  { fontSize: 17, color: '#007AFF', fontWeight: '600' },
   modalNavTitle:  { fontSize: 17, fontWeight: '700', color: DARK },
+
+  ageOverlay:         { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', alignItems: 'center', padding: 24 },
+  ageSheet:           { backgroundColor: '#fff', borderRadius: 24, padding: 24, width: '100%', maxWidth: 360 },
+  ageSheetTitle:      { fontSize: 20, fontWeight: '800', color: DARK, marginBottom: 4 },
+  ageSheetSub:        { fontSize: 13, color: '#8E8E93', marginBottom: 20 },
+  ageOption:          { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 16, borderRadius: 14, marginBottom: 8, backgroundColor: BG },
+  ageOptionActive:    { backgroundColor: DARK },
+  ageOptionText:      { flex: 1, fontSize: 16, fontWeight: '600', color: DARK },
+  ageOptionTextActive:{ color: '#fff' },
+  ageCheck:           { fontSize: 16, color: YELLOW, fontWeight: '800' },
+  ageCancelBtn:       { marginTop: 8, alignItems: 'center', paddingVertical: 14 },
+  ageCancelText:      { fontSize: 16, fontWeight: '600', color: '#8E8E93' },
 });
