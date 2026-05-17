@@ -185,8 +185,12 @@ export default function ParametersScreen({ memberId }: Props) {
         {/* Nutrient rows */}
         <Text style={ps.sectionLabel}>Nutrient Targets</Text>
         {NUTRIENTS.map(nutrient => {
-          const active  = targetParams[nutrient] > 0;
-          const met     = active && todayTotals[nutrient] >= targetParams[nutrient];
+          const active   = targetParams[nutrient] > 0;
+          const pct      = active ? todayTotals[nutrient] / targetParams[nutrient] : 0;
+          const full     = pct >= 1.0;
+          const partial  = pct >= 0.7;
+          const isGram   = N_UNIT[nutrient] === 'g';
+          const pctStr   = isGram ? ` · ${Math.round(pct * 100)}%` : '';
 
           return (
             <View key={nutrient} style={[ps.nutrientCard, active && { borderLeftWidth: 4, borderLeftColor: N_COLOR[nutrient] }]}>
@@ -197,10 +201,14 @@ export default function ParametersScreen({ memberId }: Props) {
               <View style={ps.nutrientInfo}>
                 <Text style={ps.nutrientName}>{N_LABEL[nutrient]}</Text>
                 {active ? (
-                  <Text style={[ps.nutrientStatus, { color: met ? '#34C759' : '#AEAEB2' }]}>
-                    {met
+                  <Text style={[ps.nutrientStatus, {
+                    color: full ? '#34C759' : partial ? '#A07800' : '#AEAEB2',
+                  }]}>
+                    {full
                       ? `✓ Hit today! (${todayTotals[nutrient]}${N_UNIT[nutrient]})`
-                      : `Today: ${todayTotals[nutrient]} / ${targetParams[nutrient]}${N_UNIT[nutrient]}`}
+                      : partial
+                        ? `Partially hit${pctStr}`
+                        : `No credit yet${pctStr}`}
                   </Text>
                 ) : (
                   <Text style={ps.nutrientStatus}>
@@ -237,12 +245,9 @@ export default function ParametersScreen({ memberId }: Props) {
               )}
 
               {active && (() => {
-                const pct     = todayTotals[nutrient] / targetParams[nutrient];
-                const full    = pct >= 1.0;
-                const partial = pct >= 0.7;
-                const badgeBg   = full ? '#34C75933' : partial ? YELLOW + '55' : YELLOW + '33';
-                const badgeText = full ? '+10 pts ✓' : partial ? '+5 pts' : '+10 pts';
-                const textColor = full ? '#1A7F3C' : '#A07800';
+                const badgeBg   = full ? '#34C75933' : partial ? YELLOW + '44' : '#E5E5EA';
+                const badgeText = full ? '+10 pts ✓' : partial ? '+5 pts' : '+0 pts';
+                const textColor = full ? '#1A7F3C' : partial ? '#A07800' : '#8E8E93';
                 return (
                   <View style={[ps.ptsBadge, { backgroundColor: badgeBg }]}>
                     <Text style={[ps.ptsBadgeText, { color: textColor }]}>{badgeText}</Text>
