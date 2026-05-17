@@ -10,8 +10,19 @@ import Svg, { Circle as SvgCircle } from 'react-native-svg';
 import {
   useApp, Goal, GoalType, FamilyMember,
   calcWeekPoints, calcTodayPoints, getWeekStart, todayString,
-  TAB_BAR_HEIGHT,
+  TAB_BAR_HEIGHT, suggestWeeklyGoals,
 } from './store';
+
+type Difficulty = 'easy' | 'medium' | 'hard' | 'custom';
+const DIFF_COLOR: Record<Difficulty, string> = {
+  easy:   '#34C759',
+  medium: '#FFD60A',
+  hard:   '#FF6B35',
+  custom: '#5856D6',
+};
+const DIFF_LABEL: Record<Difficulty, string> = {
+  easy: 'Easy', medium: 'Medium', hard: 'Hard', custom: 'Custom',
+};
 
 const YELLOW = '#FFD60A';
 const DARK   = '#1C1C1E';
@@ -214,7 +225,7 @@ function MemberCircle({ size, progress, strokeWidth = 7, isSelf = false, animate
 }
 
 export default function FamilyScreen() {
-  const { role, goals, setGoals, entries, params, history, familyName, familyCode, familyMembers, currentUserName, currentUserId } = useApp();
+  const { role, goals, setGoals, entries, params, history, familyName, familyCode, familyMembers, currentUserName, currentUserId, familyNutrients } = useApp();
 
   const [expandedGoals, setExpandedGoals] = useState<Set<string>>(() => new Set([goals[0]?.id]));
   const [showPastGoals, setShowPastGoals] = useState(false);
@@ -224,6 +235,7 @@ export default function FamilyScreen() {
 
   const [fTitle,        setFTitle]        = useState('');
   const [fType,         setFType]         = useState<GoalType>('individual');
+  const [fDifficulty,   setFDifficulty]   = useState<Difficulty>('medium');
   const [fPointsTarget, setFPointsTarget] = useState('');
   const [fReward,       setFReward]       = useState('');
 
@@ -239,6 +251,16 @@ export default function FamilyScreen() {
   const totalFamilyPts       = allMembers.reduce((s, m) => s + m.weekPts, 0);
   const individualGoalTarget = goals.find(g => g.type === 'individual')?.weeklyPointsTarget ?? 100;
   const groupGoalTarget      = goals.find(g => g.type === 'group')?.weeklyPointsTarget ?? 100;
+
+  const individualSuggested = suggestWeeklyGoals(params);
+  const snap = (n: number) => Math.round(n / 5) * 5;
+  const groupMaxPerDay = familyNutrients.length * 10 * allMembers.length;
+  const groupSuggested = {
+    easy:   snap(groupMaxPerDay * 7 * 0.45),
+    medium: snap(groupMaxPerDay * 7 * 0.65),
+    hard:   snap(groupMaxPerDay * 7 * 0.82),
+  };
+  const getSuggested = (type: GoalType) => type === 'individual' ? individualSuggested : groupSuggested;
 
   // ── Animation ────────────────────────────────────────────────────────────────
   const shouldAnimate = useRef(!_familyAnimPlayed).current;
@@ -302,20 +324,24 @@ export default function FamilyScreen() {
 
   const openAdd = () => {
     setEditingGoal(null);
-    setFTitle(''); setFType('individual'); setFPointsTarget(''); setFReward('');
+    setFTitle(''); setFType('individual'); setFDifficulty('medium'); setFPointsTarget(''); setFReward('');
     setModalVisible(true);
   };
 
   const openEdit = (goal: Goal) => {
     setEditingGoal(goal);
-    setFTitle(goal.title); setFType(goal.type);
-    setFPointsTarget(String(goal.weeklyPointsTarget));
-    setFReward(goal.reward);
+    setFTitle(goal.title); setFType(goal.type); setFReward(goal.reward);
+    const s = getSuggested(goal.type);
+    if (goal.weeklyPointsTarget === s.easy)        { setFDifficulty('easy');   setFPointsTarget(''); }
+    else if (goal.weeklyPointsTarget === s.medium) { setFDifficulty('medium'); setFPointsTarget(''); }
+    else if (goal.weeklyPointsTarget === s.hard)   { setFDifficulty('hard');   setFPointsTarget(''); }
+    else                                           { setFDifficulty('custom'); setFPointsTarget(String(goal.weeklyPointsTarget)); }
     setModalVisible(true);
   };
 
   const saveGoal = () => {
-    const pts = parseInt(fPointsTarget, 10);
+    const s = getSuggested(fType);
+    const pts = fDifficulty === 'custom' ? parseInt(fPointsTarget, 10) : s[fDifficulty];
     if (!fTitle.trim() || isNaN(pts) || pts <= 0) return;
     if (editingGoal) {
       setGoals(prev => prev.map(g =>
@@ -548,7 +574,43 @@ export default function FamilyScreen() {
             </View>
 
             <Text style={fs.fieldLabel}>Points to Complete</Text>
-            <TextInput style={fs.input} placeholder="e.g. 70" placeholderTextColor="#aaa" keyboardType="numeric" value={fPointsTarget} onChangeText={setFPointsTarget} />
+            <View style={fs.diffRow}>
+              {(['easy', 'medium', 'hard'] as Difficulty[]).map(d => {
+                const pts     = getSuggested(fType)[d as 'easy' | 'medium' | 'hard'];
+                const color   = DIFF_COLOR[d];
+                const sel     = fDifficulty === d;
+                return (
+                  <TouchableOpacity
+                    key={d}
+                    style={[fs.diffChip, sel && { backgroundColor: color + '22', borderColor: color }]}
+                    onPress={() => setFDifficulty(d)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[fs.diffChipLabel, { color: sel ? color : '#8E8E93' }]}>{DIFF_LABEL[d]}</Text>
+                    <Text style={[fs.diffChipPts, { color: sel ? color : '#AEAEB2' }]}>{pts} pts</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            <TouchableOpacity
+              style={[fs.diffCustomBtn, fDifficulty === 'custom' && { borderColor: DIFF_COLOR.custom, backgroundColor: DIFF_COLOR.custom + '11' }]}
+              onPress={() => setFDifficulty('custom')}
+              activeOpacity={0.7}
+            >
+              <Text style={[fs.diffCustomText, { color: fDifficulty === 'custom' ? DIFF_COLOR.custom : '#8E8E93' }]}>
+                ✏️ Custom points
+              </Text>
+            </TouchableOpacity>
+            {fDifficulty === 'custom' && (
+              <TextInput
+                style={[fs.input, { marginTop: 8 }]}
+                placeholder="Enter points target"
+                placeholderTextColor="#aaa"
+                keyboardType="numeric"
+                value={fPointsTarget}
+                onChangeText={setFPointsTarget}
+              />
+            )}
 
             <Text style={fs.fieldLabel}>Reward 🏆</Text>
             <TextInput style={fs.input} placeholder="e.g. $10 allowance" placeholderTextColor="#aaa" value={fReward} onChangeText={setFReward} />
@@ -663,4 +725,11 @@ const fs = StyleSheet.create({
   cancelText:  { fontSize: 16, fontWeight: '700', color: DARK },
   saveBtn:     { flex: 1, padding: 15, borderRadius: 16, backgroundColor: YELLOW, alignItems: 'center' },
   saveText:    { fontSize: 16, fontWeight: '800', color: DARK },
+
+  diffRow:       { flexDirection: 'row', gap: 8, marginBottom: 8 },
+  diffChip:      { flex: 1, borderRadius: 14, borderWidth: 1.5, borderColor: '#E5E5EA', paddingVertical: 10, paddingHorizontal: 6, alignItems: 'center', backgroundColor: '#F5F5F5' },
+  diffChipLabel: { fontSize: 13, fontWeight: '700' },
+  diffChipPts:   { fontSize: 11, fontWeight: '600', marginTop: 3 },
+  diffCustomBtn: { borderRadius: 14, borderWidth: 1.5, borderColor: '#E5E5EA', paddingVertical: 10, alignItems: 'center', backgroundColor: '#F5F5F5', marginBottom: 4 },
+  diffCustomText:{ fontSize: 13, fontWeight: '700' },
 });
