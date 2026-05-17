@@ -397,16 +397,28 @@ export default function HomeScreen() {
         {NUTRIENTS.some(n => params[n] > 0) ? (
           <View style={s.nutrientGrid}>
             {NUTRIENTS.filter(n => params[n] > 0).map(n => {
-              const val = (totals as any)[n] as number;
-              const met = val >= params[n];
+              const val     = (totals as any)[n] as number;
+              const pct     = Math.min(val / params[n], 1);
+              const met     = pct >= 1;
+              const pctNum  = Math.round(pct * 100);
+              const isPerct = N_UNIT[n] === '%';
+              const subtitle = met
+                ? '✓ Done'
+                : isPerct
+                  ? `${val} / 100%`
+                  : `${val} / ${params[n]}g`;
               return (
                 <View key={n} style={nc.wrapper}>
-                  <CircularProgress size={82} progress={Math.min(val / params[n], 1)} color={met ? '#34C759' : N_COLOR[n]} strokeWidth={7}>
+                  <CircularProgress size={96} progress={pct} color={met ? '#34C759' : N_COLOR[n]} strokeWidth={10}>
                     <Text style={nc.emoji}>{N_EMOJI[n]}</Text>
-                    <Text style={nc.val}>{val}<Text style={nc.unit}>{N_UNIT[n]}</Text></Text>
-                    {met && <Text style={nc.check}>✓</Text>}
+                    {met ? (
+                      <Text style={nc.check}>✓</Text>
+                    ) : (
+                      <Text style={nc.val}>{pctNum}<Text style={nc.unit}>%</Text></Text>
+                    )}
                   </CircularProgress>
                   <Text style={nc.label}>{N_LABEL[n]}</Text>
+                  <Text style={[nc.sub, met && { color: '#34C759' }]}>{subtitle}</Text>
                 </View>
               );
             })}
@@ -768,7 +780,7 @@ const s = StyleSheet.create({
   noTargetsText:  { fontSize: 15, fontWeight: '700', color: '#AEAEB2', marginBottom: 4 },
   noTargetsSub:   { fontSize: 13, color: '#C7C7CC', textAlign: 'center' },
 
-  nutrientGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 16, gap: 12, justifyContent: 'space-between' },
+  nutrientGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 16, gap: 10, justifyContent: 'space-between' },
   goalRow:      { paddingHorizontal: 16, gap: 12 },
 
   mealCard:    { backgroundColor: '#fff', marginHorizontal: 16, marginBottom: 10, borderRadius: 20, padding: 16, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 1 }, elevation: 2 },
@@ -840,12 +852,13 @@ const ds = StyleSheet.create({
 
 // Nutrient circles
 const nc = StyleSheet.create({
-  wrapper: { width: '30%', alignItems: 'center', marginBottom: 4 },
-  emoji:   { fontSize: 17, marginBottom: 1 },
-  val:     { fontSize: 13, fontWeight: '800', color: '#1C1C1E' },
-  unit:    { fontSize: 9, fontWeight: '500', color: '#8E8E93' },
-  check:   { fontSize: 10, color: '#34C759', fontWeight: '700' },
-  label:   { fontSize: 11, fontWeight: '600', color: '#8E8E93', marginTop: 4 },
+  wrapper: { width: '30%', alignItems: 'center', marginBottom: 8 },
+  emoji:   { fontSize: 18, marginBottom: 2 },
+  val:     { fontSize: 18, fontWeight: '800', color: '#1C1C1E' },
+  unit:    { fontSize: 10, fontWeight: '600', color: '#8E8E93' },
+  check:   { fontSize: 20, color: '#34C759', fontWeight: '800' },
+  label:   { fontSize: 11, fontWeight: '700', color: '#8E8E93', marginTop: 7 },
+  sub:     { fontSize: 10, fontWeight: '500', color: '#AEAEB2', marginTop: 2 },
 });
 
 // Goal circles
