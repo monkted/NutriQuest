@@ -318,10 +318,10 @@ const ps = StyleSheet.create({
   infoText:   { fontSize: 13, color: '#8E8E93', lineHeight: 20 },
   infoBold:   { fontWeight: '700', color: DARK },
 
-  todaySummary:     { backgroundColor: DARK, borderRadius: 18, padding: 16, marginBottom: 16, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  todaySummary:     { backgroundColor: '#fff', borderRadius: 18, padding: 16, marginBottom: 16, flexDirection: 'row', alignItems: 'center', gap: 12, borderLeftWidth: 4, borderLeftColor: YELLOW, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 5, shadowOffset: { width: 0, height: 1 }, elevation: 2 },
   todaySummaryLeft: { },
-  todaySummaryLabel:{ fontSize: 12, color: '#AEAEB2', fontWeight: '600' },
-  todaySummaryPts:  { fontSize: 28, fontWeight: '800', color: YELLOW, marginTop: 2 },
+  todaySummaryLabel:{ fontSize: 12, color: '#8E8E93', fontWeight: '600' },
+  todaySummaryPts:  { fontSize: 28, fontWeight: '800', color: DARK, marginTop: 2 },
   todaySummaryMax:  { fontSize: 13, fontWeight: '500', color: '#8E8E93' },
   todayChips:       { flex: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   todayChip:        { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10 },

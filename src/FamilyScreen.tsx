@@ -356,7 +356,7 @@ export default function FamilyScreen() {
         <Text style={fs.sectionLabel}>Individual Points This Week</Text>
         <View style={fs.memberGrid}>
           {allMembers.map(m => {
-            const isCurrentUser = m.id === 'u1';
+            const isCurrentUser = m.id === currentUserId;
             const progress = Math.min(m.weekPts / individualGoalTarget, 1);
 
             const circle = (
