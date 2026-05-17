@@ -189,8 +189,7 @@ export default function ParametersScreen({ memberId }: Props) {
           const pct      = active ? todayTotals[nutrient] / targetParams[nutrient] : 0;
           const full     = pct >= 1.0;
           const partial  = pct >= 0.7;
-          const isGram   = N_UNIT[nutrient] === 'g';
-          const pctStr   = isGram ? ` · ${Math.round(pct * 100)}%` : '';
+          const pctStr   = ` · ${Math.round(pct * 100)}%`;
 
           return (
             <View key={nutrient} style={[ps.nutrientCard, active && { borderLeftWidth: 4, borderLeftColor: N_COLOR[nutrient] }]}>
