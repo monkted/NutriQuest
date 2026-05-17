@@ -25,9 +25,6 @@ const MEALS: Meal[] = ['Breakfast', 'Lunch', 'Dinner', 'Snacks'];
 const MEAL_EMOJI:  Record<Meal, string> = { Breakfast: '🌅', Lunch: '☀️', Dinner: '🌙', Snacks: '🍎' };
 const MEAL_COLOR:  Record<Meal, string> = { Breakfast: '#FF9500', Lunch: '#34C759', Dinner: '#5856D6', Snacks: '#FF2D55' };
 const DAY_LETTERS = ['Su', 'M', 'Tu', 'W', 'Th', 'F', 'Sa'];
-const DEFAULT_TARGETS: Record<Nutrient, number> = {
-  protein: 50, carbs: 230, fat: 65, fiber: 25, vitamins: 100, minerals: 100,
-};
 const LOG_BTN_H = 64;
 
 // ─── Animated SVG circle ────────────────────────────────────────────────────
@@ -387,23 +384,29 @@ export default function HomeScreen() {
 
         {/* ── Nutrients ── */}
         <Text style={s.sectionLabel}>Nutrients{!isToday ? ` · ${formatDateShort(selectedDate)}` : ''}</Text>
-        <View style={s.nutrientGrid}>
-          {NUTRIENTS.map(n => {
-            const target = params[n] > 0 ? params[n] : DEFAULT_TARGETS[n];
-            const val    = (totals as any)[n] as number;
-            const met    = params[n] > 0 && val >= params[n];
-            return (
-              <View key={n} style={nc.wrapper}>
-                <CircularProgress size={82} progress={Math.min(val / target, 1)} color={met ? '#34C759' : N_COLOR[n]} strokeWidth={7}>
-                  <Text style={nc.emoji}>{N_EMOJI[n]}</Text>
-                  <Text style={nc.val}>{val}<Text style={nc.unit}>{N_UNIT[n]}</Text></Text>
-                  {met && <Text style={nc.check}>✓</Text>}
-                </CircularProgress>
-                <Text style={nc.label}>{N_LABEL[n]}</Text>
-              </View>
-            );
-          })}
-        </View>
+        {NUTRIENTS.some(n => params[n] > 0) ? (
+          <View style={s.nutrientGrid}>
+            {NUTRIENTS.filter(n => params[n] > 0).map(n => {
+              const val = (totals as any)[n] as number;
+              const met = val >= params[n];
+              return (
+                <View key={n} style={nc.wrapper}>
+                  <CircularProgress size={82} progress={Math.min(val / params[n], 1)} color={met ? '#34C759' : N_COLOR[n]} strokeWidth={7}>
+                    <Text style={nc.emoji}>{N_EMOJI[n]}</Text>
+                    <Text style={nc.val}>{val}<Text style={nc.unit}>{N_UNIT[n]}</Text></Text>
+                    {met && <Text style={nc.check}>✓</Text>}
+                  </CircularProgress>
+                  <Text style={nc.label}>{N_LABEL[n]}</Text>
+                </View>
+              );
+            })}
+          </View>
+        ) : (
+          <View style={s.noTargetsWrap}>
+            <Text style={s.noTargetsText}>No nutrient targets set yet</Text>
+            <Text style={s.noTargetsSub}>Ask a parent to configure targets in Account settings</Text>
+          </View>
+        )}
 
         {/* ── Goals ── */}
         {goals.length > 0 && (
@@ -716,7 +719,10 @@ const s = StyleSheet.create({
   pointsVal:        { fontSize: 26, fontWeight: '800', color: DARK },
   pointsPts:        { fontSize: 13, fontWeight: '500', color: '#8E8E93' },
 
-  sectionLabel: { fontSize: 17, fontWeight: '700', color: DARK, marginHorizontal: 16, marginTop: 18, marginBottom: 12 },
+  sectionLabel:   { fontSize: 17, fontWeight: '700', color: DARK, marginHorizontal: 16, marginTop: 18, marginBottom: 12 },
+  noTargetsWrap:  { marginHorizontal: 16, marginBottom: 8, backgroundColor: '#fff', borderRadius: 16, padding: 20, alignItems: 'center' },
+  noTargetsText:  { fontSize: 15, fontWeight: '700', color: '#AEAEB2', marginBottom: 4 },
+  noTargetsSub:   { fontSize: 13, color: '#C7C7CC', textAlign: 'center' },
 
   nutrientGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 16, gap: 12, justifyContent: 'space-between' },
   goalRow:      { paddingHorizontal: 16, gap: 12 },
