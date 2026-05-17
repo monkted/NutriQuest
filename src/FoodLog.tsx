@@ -33,14 +33,19 @@ const AnimCircle = Animated.createAnimatedComponent(Circle);
 
 // ─── Circular Progress ────────────────────────────────────────────────────────
 
-function CircularProgress({ size, progress, color, strokeWidth = 6, children }: {
-  size: number; progress: number; color: string; strokeWidth?: number; children?: React.ReactNode;
+function CircularProgress({ size, progress, color, strokeWidth = 6, outerRingColor, children }: {
+  size: number; progress: number; color: string; strokeWidth?: number; outerRingColor?: string; children?: React.ReactNode;
 }) {
   const r      = (size - strokeWidth) / 2;
   const cx     = size / 2;
   const circ   = 2 * Math.PI * r;
   const pct    = Math.min(Math.max(progress, 0), 1);
   const target = circ * (1 - pct);
+
+  // Outer ring dimensions — 8px gap around the inner circle
+  const outerSize = size + 8;
+  const outerR    = (outerSize - 3) / 2;
+  const outerCx   = outerSize / 2;
 
   const offsetAnim  = useRef(new Animated.Value(_homeAnimPlayed ? target : circ)).current;
   const mountedRef  = useRef(false);
@@ -61,7 +66,12 @@ function CircularProgress({ size, progress, color, strokeWidth = 6, children }: 
   }, [target]);
 
   return (
-    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+    <View style={{ width: outerSize, height: outerSize, alignItems: 'center', justifyContent: 'center' }}>
+      {outerRingColor && (
+        <Svg width={outerSize} height={outerSize} style={{ position: 'absolute' }}>
+          <Circle cx={outerCx} cy={outerCx} r={outerR} stroke={outerRingColor} strokeWidth={3} fill="none" />
+        </Svg>
+      )}
       <Svg width={size} height={size} style={{ position: 'absolute' }}>
         <Circle cx={cx} cy={cx} r={r} stroke="#EFEFEF" strokeWidth={strokeWidth} fill="none" />
         <AnimCircle cx={cx} cy={cx} r={r} stroke={color} strokeWidth={strokeWidth} fill="none"
@@ -397,19 +407,23 @@ export default function HomeScreen() {
         {NUTRIENTS.some(n => params[n] > 0) ? (
           <View style={s.nutrientGrid}>
             {NUTRIENTS.filter(n => params[n] > 0).map(n => {
-              const val     = (totals as any)[n] as number;
-              const pct     = Math.min(val / params[n], 1);
-              const met     = pct >= 1;
-              const pctNum  = Math.round(pct * 100);
-              const isPerct = N_UNIT[n] === '%';
-              const subtitle = met
+              const val       = (totals as any)[n] as number;
+              const pct       = Math.min(val / params[n], 1);
+              const met       = pct >= 1;
+              const partial   = pct >= 0.7;
+              const pctNum    = Math.round(pct * 100);
+              const isPerct   = N_UNIT[n] === '%';
+              const ringColor = met ? '#34C759' : partial ? '#FF9500' : '#D1D1D6';
+              const subtitle  = met
                 ? '✓ Done'
-                : isPerct
-                  ? `${val} / 100%`
-                  : `${val} / ${params[n]}g`;
+                : partial
+                  ? 'Partially done'
+                  : 'No credit';
+              const subColor  = met ? '#34C759' : partial ? '#FF9500' : '#AEAEB2';
+              const valLine   = isPerct ? `${val} / 100%` : `${val} / ${params[n]}g`;
               return (
                 <View key={n} style={nc.wrapper}>
-                  <CircularProgress size={96} progress={pct} color={met ? '#34C759' : N_COLOR[n]} strokeWidth={10}>
+                  <CircularProgress size={88} progress={pct} color={N_COLOR[n]} strokeWidth={7} outerRingColor={ringColor}>
                     <Text style={nc.emoji}>{N_EMOJI[n]}</Text>
                     {met ? (
                       <Text style={nc.check}>✓</Text>
@@ -418,7 +432,8 @@ export default function HomeScreen() {
                     )}
                   </CircularProgress>
                   <Text style={nc.label}>{N_LABEL[n]}</Text>
-                  <Text style={[nc.sub, met && { color: '#34C759' }]}>{subtitle}</Text>
+                  <Text style={[nc.sub, { color: subColor }]}>{subtitle}</Text>
+                  <Text style={nc.valLine}>{valLine}</Text>
                 </View>
               );
             })}
@@ -853,12 +868,13 @@ const ds = StyleSheet.create({
 // Nutrient circles
 const nc = StyleSheet.create({
   wrapper: { width: '30%', alignItems: 'center', marginBottom: 8 },
-  emoji:   { fontSize: 18, marginBottom: 2 },
-  val:     { fontSize: 18, fontWeight: '800', color: '#1C1C1E' },
+  emoji:   { fontSize: 17, marginBottom: 1 },
+  val:     { fontSize: 17, fontWeight: '800', color: '#1C1C1E' },
   unit:    { fontSize: 10, fontWeight: '600', color: '#8E8E93' },
-  check:   { fontSize: 20, color: '#34C759', fontWeight: '800' },
+  check:   { fontSize: 18, color: '#34C759', fontWeight: '800' },
   label:   { fontSize: 11, fontWeight: '700', color: '#8E8E93', marginTop: 7 },
-  sub:     { fontSize: 10, fontWeight: '500', color: '#AEAEB2', marginTop: 2 },
+  sub:     { fontSize: 10, fontWeight: '700', marginTop: 2 },
+  valLine: { fontSize: 9,  fontWeight: '500', color: '#AEAEB2', marginTop: 1 },
 });
 
 // Goal circles
