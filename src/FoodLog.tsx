@@ -318,6 +318,16 @@ export default function HomeScreen() {
   const removeEntry = (id: string) =>
     updateHistoryDay(selectedDate, prev => prev.filter(e => e.id !== id));
 
+  // ── Nutrient field config (used in modal grid) ──────────────────────────────
+  const nutrientFields: Array<{ key: Nutrient; value: string; setter: (v: string) => void }> = [
+    { key: 'protein',  value: iProtein,  setter: setIProtein  },
+    { key: 'carbs',    value: iCarbs,    setter: setICarbs    },
+    { key: 'fat',      value: iFat,      setter: setIFat      },
+    { key: 'fiber',    value: iFiber,    setter: setIFiber    },
+    { key: 'vitamins', value: iVitamins, setter: setIVitamins },
+    { key: 'minerals', value: iMinerals, setter: setIMinerals },
+  ];
+
   // ── Render ───────────────────────────────────────────────────────────────────
 
   return (
@@ -612,7 +622,7 @@ export default function HomeScreen() {
       {/* ── Manual Entry Modal ── */}
       <Modal visible={modalVisible} animationType="slide" transparent>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={s.overlay}>
-          <View style={s.sheet}>
+          <ScrollView style={s.sheet} contentContainerStyle={{ paddingBottom: 8 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} bounces={false}>
             <Text style={s.sheetTitle}>Log Food 🍽️{!isToday ? ` · ${formatDateShort(selectedDate)}` : ''}</Text>
 
             <View style={s.chipRow}>
@@ -657,20 +667,54 @@ export default function HomeScreen() {
 
             {searchResults.length === 0 && (
               <>
-                <TextInput style={s.input} placeholder="Food name 🥦" placeholderTextColor="#aaa" value={iName} onChangeText={setIName} />
-                <View style={s.inputRow}>
-                  <TextInput style={[s.input, s.inputHalf]} placeholder="🔥 Calories"   placeholderTextColor="#aaa" keyboardType="numeric" value={iCal}      onChangeText={setICal}      />
-                  <TextInput style={[s.input, s.inputHalf]} placeholder="💪 Protein g"  placeholderTextColor="#aaa" keyboardType="numeric" value={iProtein}  onChangeText={setIProtein}  />
+                {/* Food name */}
+                <Text style={ni.fieldLabel}>Food Name</Text>
+                <TextInput style={[s.input, { marginBottom: 10 }]} placeholder="e.g. Grilled Chicken" placeholderTextColor="#aaa" value={iName} onChangeText={setIName} />
+
+                {/* Calories — no nutrient goal, shown as simple card */}
+                <View style={ni.calCard}>
+                  <Text style={ni.calLabel}>🔥 Calories</Text>
+                  <View style={ni.calRight}>
+                    <TextInput style={ni.calInput} placeholder="0" placeholderTextColor="#AEAEB2" keyboardType="numeric" value={iCal} onChangeText={setICal} />
+                    <Text style={ni.unit}>kcal</Text>
+                  </View>
                 </View>
-                <View style={s.inputRow}>
-                  <TextInput style={[s.input, s.inputHalf]} placeholder="🌾 Carbs g"    placeholderTextColor="#aaa" keyboardType="numeric" value={iCarbs}    onChangeText={setICarbs}    />
-                  <TextInput style={[s.input, s.inputHalf]} placeholder="🥑 Fat g"      placeholderTextColor="#aaa" keyboardType="numeric" value={iFat}      onChangeText={setIFat}      />
+
+                {/* Nutrient grid — persistent labels + contribution badges */}
+                <View style={ni.grid}>
+                  {nutrientFields.map(({ key, value, setter }) => {
+                    const goalVal  = params[key] ?? 0;
+                    const alreadyMet = goalVal > 0 && (totals as Record<Nutrient, number>)[key] >= goalVal;
+                    const inputNum = parseFloat(value);
+                    const contrib  = goalVal > 0 && !isNaN(inputNum) && inputNum > 0
+                      ? Math.round((inputNum / goalVal) * 100) : 0;
+                    return (
+                      <View key={key} style={ni.cell}>
+                        <View style={ni.cellTop}>
+                          <Text style={ni.cellLabel}>{N_EMOJI[key]} {N_LABEL[key]}</Text>
+                          {goalVal > 0 && (
+                            alreadyMet
+                              ? <Text style={ni.badgeDone}>✓</Text>
+                              : contrib > 0
+                                ? <Text style={[ni.badgePct, { color: N_COLOR[key] }]}>+{contrib}%</Text>
+                                : null
+                          )}
+                        </View>
+                        <View style={ni.cellInputRow}>
+                          <TextInput
+                            style={ni.cellInput}
+                            value={value}
+                            onChangeText={setter}
+                            keyboardType="numeric"
+                            placeholder="0"
+                            placeholderTextColor="#AEAEB2"
+                          />
+                          <Text style={ni.unit}>{N_UNIT[key]}</Text>
+                        </View>
+                      </View>
+                    );
+                  })}
                 </View>
-                <View style={s.inputRow}>
-                  <TextInput style={[s.input, s.inputHalf]} placeholder="🥦 Fiber g"    placeholderTextColor="#aaa" keyboardType="numeric" value={iFiber}    onChangeText={setIFiber}    />
-                  <TextInput style={[s.input, s.inputHalf]} placeholder="🍊 Vitamins %" placeholderTextColor="#aaa" keyboardType="numeric" value={iVitamins} onChangeText={setIVitamins} />
-                </View>
-                <TextInput style={s.input} placeholder="⚡ Minerals %" placeholderTextColor="#aaa" keyboardType="numeric" value={iMinerals} onChangeText={setIMinerals} />
               </>
             )}
 
@@ -678,7 +722,7 @@ export default function HomeScreen() {
               <TouchableOpacity style={s.cancelBtn} onPress={closeModal}><Text style={s.cancelText}>Cancel</Text></TouchableOpacity>
               <TouchableOpacity style={s.saveBtn} onPress={addFood}><Text style={s.saveText}>Add Food ✓</Text></TouchableOpacity>
             </View>
-          </View>
+          </ScrollView>
         </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
@@ -750,7 +794,7 @@ const s = StyleSheet.create({
   logBtnText:   { fontSize: 17, fontWeight: '800', color: DARK },
 
   overlay:       { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.45)' },
-  sheet:         { backgroundColor: '#fff', borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24 },
+  sheet:         { backgroundColor: '#fff', borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, maxHeight: '92%' },
   sheetTitle:    { fontSize: 20, fontWeight: '800', color: DARK, marginBottom: 16 },
   searchWrap:    { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F5F5F5', borderRadius: 14, paddingHorizontal: 12, marginBottom: 10 },
   searchIcon:    { fontSize: 16, marginRight: 8 },
@@ -872,4 +916,24 @@ const an = StyleSheet.create({
 const chip = StyleSheet.create({
   pill: { paddingHorizontal: 7, paddingVertical: 3, borderRadius: 8 },
   text: { fontSize: 11, fontWeight: '600', color: '#3C3C43' },
+});
+
+// Nutrient input grid (manual entry modal)
+const ni = StyleSheet.create({
+  fieldLabel:   { fontSize: 13, fontWeight: '700', color: '#8E8E93', marginBottom: 6 },
+
+  calCard:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#F5F5F5', borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, marginBottom: 10 },
+  calLabel:     { fontSize: 14, fontWeight: '700', color: DARK },
+  calRight:     { flexDirection: 'row', alignItems: 'baseline', gap: 5 },
+  calInput:     { fontSize: 22, fontWeight: '800', color: DARK, minWidth: 64, textAlign: 'right' },
+
+  grid:         { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 10 },
+  cell:         { width: '47%', backgroundColor: '#F5F5F5', borderRadius: 14, padding: 12 },
+  cellTop:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
+  cellLabel:    { fontSize: 12, fontWeight: '700', color: '#8E8E93' },
+  badgeDone:    { fontSize: 14, fontWeight: '800', color: '#34C759' },
+  badgePct:     { fontSize: 11, fontWeight: '800' },
+  cellInputRow: { flexDirection: 'row', alignItems: 'baseline', gap: 4 },
+  cellInput:    { flex: 1, fontSize: 22, fontWeight: '800', color: DARK, padding: 0 },
+  unit:         { fontSize: 12, fontWeight: '600', color: '#AEAEB2' },
 });
