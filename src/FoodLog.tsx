@@ -42,10 +42,12 @@ function CircularProgress({ size, progress, color, strokeWidth = 6, outerRingCol
   const pct    = Math.min(Math.max(progress, 0), 1);
   const target = circ * (1 - pct);
 
-  // Outer ring dimensions — 8px gap around the inner circle
-  const outerSize = size + 8;
-  const outerR    = (outerSize - 3) / 2;
-  const outerCx   = outerSize / 2;
+  // Outer ring: extends beyond the container via negative absolute offset
+  // so the wrapper size stays at `size` with no layout shift.
+  const RING_GAP    = 10;
+  const ringSvgSize = size + RING_GAP * 2;
+  const ringR       = (ringSvgSize - 4) / 2;
+  const ringCx      = ringSvgSize / 2;
 
   const offsetAnim  = useRef(new Animated.Value(_homeAnimPlayed ? target : circ)).current;
   const mountedRef  = useRef(false);
@@ -66,10 +68,13 @@ function CircularProgress({ size, progress, color, strokeWidth = 6, outerRingCol
   }, [target]);
 
   return (
-    <View style={{ width: outerSize, height: outerSize, alignItems: 'center', justifyContent: 'center' }}>
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
       {outerRingColor && (
-        <Svg width={outerSize} height={outerSize} style={{ position: 'absolute' }}>
-          <Circle cx={outerCx} cy={outerCx} r={outerR} stroke={outerRingColor} strokeWidth={3} fill="none" />
+        <Svg
+          width={ringSvgSize} height={ringSvgSize}
+          style={{ position: 'absolute', top: -RING_GAP, left: -RING_GAP }}
+        >
+          <Circle cx={ringCx} cy={ringCx} r={ringR} stroke={outerRingColor} strokeWidth={3} fill="none" />
         </Svg>
       )}
       <Svg width={size} height={size} style={{ position: 'absolute' }}>
@@ -413,7 +418,7 @@ export default function HomeScreen() {
               const partial   = pct >= 0.7;
               const pctNum    = Math.round(pct * 100);
               const isPerct   = N_UNIT[n] === '%';
-              const ringColor = met ? '#34C759' : partial ? '#FF9500' : '#D1D1D6';
+              const ringColor = met ? '#34C759' : partial ? '#C9A600' : '#D1D1D6';
               const subtitle  = met
                 ? '✓ Done'
                 : partial
