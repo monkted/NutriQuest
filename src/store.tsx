@@ -58,20 +58,22 @@ export const AGE_GROUP_LABEL: Record<AgeGroup, string> = {
   adult:      'Adult',
 };
 
-// Default enabled nutrients when auto is first applied (carbs/fat/minerals off by default)
+// Default enabled nutrients when auto is first applied (carbs/fat/minerals off by default).
+// Protein at 1.8 g/kg (performance), fiber at USDA DRI.
 export const NUTRIENT_PRESETS: Record<AgeGroup, NutrientParams> = {
-  child_4_8:  { protein: 19, carbs: 0, fat: 0, fiber: 25, vitamins: 100, minerals: 0 },
-  child_9_13: { protein: 34, carbs: 0, fat: 0, fiber: 26, vitamins: 100, minerals: 0 },
-  teen_14_18: { protein: 50, carbs: 0, fat: 0, fiber: 29, vitamins: 100, minerals: 0 },
-  adult:      { protein: 50, carbs: 0, fat: 0, fiber: 25, vitamins: 100, minerals: 0 },
+  child_4_8:  { protein:  40, carbs: 0, fat: 0, fiber: 25, vitamins: 100, minerals: 0 },
+  child_9_13: { protein:  72, carbs: 0, fat: 0, fiber: 26, vitamins: 100, minerals: 0 },
+  teen_14_18: { protein: 108, carbs: 0, fat: 0, fiber: 29, vitamins: 100, minerals: 0 },
+  adult:      { protein: 135, carbs: 0, fat: 0, fiber: 25, vitamins: 100, minerals: 0 },
 };
 
-// Full DRI reference values for every nutrient — used when toggling extras on in auto mode
+// Performance-oriented reference values for every nutrient (used when extras are enabled).
+// Protein: 1.8 g/kg | Carbs: 6 g/kg | Fat: ~30% of daily calories | Fiber: USDA DRI
 export const NUTRIENT_DRI: Record<AgeGroup, NutrientParams> = {
-  child_4_8:  { protein: 19, carbs: 130, fat: 40, fiber: 25, vitamins: 100, minerals: 100 },
-  child_9_13: { protein: 34, carbs: 130, fat: 60, fiber: 26, vitamins: 100, minerals: 100 },
-  teen_14_18: { protein: 50, carbs: 130, fat: 65, fiber: 29, vitamins: 100, minerals: 100 },
-  adult:      { protein: 50, carbs: 130, fat: 65, fiber: 25, vitamins: 100, minerals: 100 },
+  child_4_8:  { protein:  40, carbs: 130, fat:  55, fiber: 25, vitamins: 100, minerals: 100 },
+  child_9_13: { protein:  72, carbs: 240, fat:  70, fiber: 26, vitamins: 100, minerals: 100 },
+  teen_14_18: { protein: 108, carbs: 360, fat:  90, fiber: 29, vitamins: 100, minerals: 100 },
+  adult:      { protein: 135, carbs: 450, fat:  80, fiber: 25, vitamins: 100, minerals: 100 },
 };
 
 export const AGE_GROUPS: AgeGroup[] = ['child_4_8', 'child_9_13', 'teen_14_18', 'adult'];
