@@ -7,7 +7,7 @@ import {
   useApp, Nutrient, NUTRIENTS,
   N_EMOJI, N_LABEL, N_UNIT, N_COLOR,
   getTodayTotals, TAB_BAR_HEIGHT,
-  AGE_GROUPS, AGE_GROUP_LABEL, NUTRIENT_PRESETS, NUTRIENT_DRI,
+  AGE_GROUPS, AGE_GROUP_LABEL, NUTRIENT_PRESETS,
   suggestWeeklyGoals,
 } from './store';
 
@@ -70,15 +70,6 @@ export default function ParametersScreen({ memberId }: Props) {
     });
   };
 
-  // Toggle a nutrient on/off while in auto mode — value is always the DRI reference
-  const toggleAutoNutrient = (n: Nutrient, val: boolean) => {
-    if (!isOther || !targetAutoPreset) return;
-    const driVal = NUTRIENT_DRI[targetAgeGroup][n];
-    updateMember(targetId, {
-      params: { ...targetMember.params, [n]: val ? driVal : 0 },
-    });
-  };
-
   const commit = (nutrient: Nutrient) => {
     const val = parseInt(draft[nutrient], 10);
     setTargetParam(nutrient, isNaN(val) || val <= 0 ? 0 : val);
@@ -125,7 +116,7 @@ export default function ParametersScreen({ memberId }: Props) {
                   <Text style={ps.autoLabel}>Auto-set nutrient targets</Text>
                   <Text style={ps.autoSub}>
                     {targetAutoPreset
-                      ? `Locked to ${AGE_GROUP_LABEL[targetAgeGroup]} DRI values · toggle nutrients below`
+                      ? `Locked to ${AGE_GROUP_LABEL[targetAgeGroup]} DRI values`
                       : 'Manual — customize each target below'}
                   </Text>
                 </View>
@@ -196,7 +187,6 @@ export default function ParametersScreen({ memberId }: Props) {
         {NUTRIENTS.map(nutrient => {
           const active  = targetParams[nutrient] > 0;
           const met     = active && todayTotals[nutrient] >= targetParams[nutrient];
-          const driVal  = NUTRIENT_DRI[targetAgeGroup][nutrient];
 
           return (
             <View key={nutrient} style={[ps.nutrientCard, active && { borderLeftWidth: 4, borderLeftColor: N_COLOR[nutrient] }]}>
@@ -214,28 +204,13 @@ export default function ParametersScreen({ memberId }: Props) {
                   </Text>
                 ) : (
                   <Text style={ps.nutrientStatus}>
-                    {targetAutoPreset && isOther
-                      ? `DRI: ${driVal}${N_UNIT[nutrient]} · toggle to enable`
-                      : 'Not set — no points for this nutrient'}
+                    Not tracked — disabled for the family
                   </Text>
                 )}
               </View>
 
-              {/* Right side: toggle (auto mode) / text input (manual) / read-only value */}
-              {isOther && targetAutoPreset ? (
-                <View style={ps.autoNutrientRight}>
-                  {active && (
-                    <Text style={ps.autoNutrientVal}>{targetParams[nutrient]}{N_UNIT[nutrient]}</Text>
-                  )}
-                  <Switch
-                    value={active}
-                    onValueChange={val => toggleAutoNutrient(nutrient, val)}
-                    trackColor={{ false: '#E5E5EA', true: N_COLOR[nutrient] }}
-                    thumbColor="#fff"
-                    style={{ transform: [{ scaleX: 0.85 }, { scaleY: 0.85 }] }}
-                  />
-                </View>
-              ) : canEdit ? (
+              {/* Right side: text input (manual) / read-only value */}
+              {canEdit ? (
                 <View style={ps.inputGroup}>
                   <TextInput
                     style={[ps.targetInput, active && { borderColor: N_COLOR[nutrient] }]}
@@ -282,6 +257,15 @@ export default function ParametersScreen({ memberId }: Props) {
           <Text style={ps.helpText}>
             Leave a field empty or set it to 0 to disable that nutrient. Changes save automatically.
           </Text>
+        )}
+
+        {isOther && targetAutoPreset && (
+          <View style={ps.familyNutrNote}>
+            <Text style={ps.familyNutrNoteText}>
+              Which nutrients are tracked is set family-wide.{'\n'}
+              Change it in <Text style={ps.familyNutrNoteLink}>Account → Settings → Family Nutrients</Text>.
+            </Text>
+          </View>
         )}
 
         {/* Suggested weekly goal — light card to match overall design */}
@@ -353,8 +337,9 @@ const ps = StyleSheet.create({
   nutrientName:  { fontSize: 15, fontWeight: '700', color: DARK },
   nutrientStatus:{ fontSize: 12, color: '#AEAEB2', marginTop: 2 },
 
-  autoNutrientRight: { alignItems: 'flex-end', gap: 2 },
-  autoNutrientVal:   { fontSize: 13, fontWeight: '700', color: DARK },
+  familyNutrNote:     { backgroundColor: '#F0F0F5', borderRadius: 12, padding: 14, marginTop: 4, marginBottom: 8 },
+  familyNutrNoteText: { fontSize: 12, color: '#8E8E93', lineHeight: 18, textAlign: 'center' },
+  familyNutrNoteLink: { color: '#5856D6', fontWeight: '700' },
 
   inputGroup:  { flexDirection: 'row', alignItems: 'center', gap: 4 },
   targetInput: { width: 56, borderWidth: 2, borderColor: '#E5E5EA', borderRadius: 10, padding: 8, fontSize: 16, fontWeight: '700', color: DARK, textAlign: 'center' },

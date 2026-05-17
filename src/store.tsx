@@ -79,25 +79,28 @@ export const AGE_GROUPS: AgeGroup[] = ['child_4_8', 'child_9_13', 'teen_14_18', 
 // ─── Context ──────────────────────────────────────────────────────────────────
 
 interface AppCtx {
-  role:             Role;
-  setRole:          (r: Role) => void;
-  entries:          FoodEntry[];
-  setEntries:       React.Dispatch<React.SetStateAction<FoodEntry[]>>;
-  goals:            Goal[];
-  setGoals:         React.Dispatch<React.SetStateAction<Goal[]>>;
-  params:           NutrientParams;
-  setParams:        React.Dispatch<React.SetStateAction<NutrientParams>>;
-  ageGroup:         AgeGroup;
-  setAgeGroup:      (g: AgeGroup) => void;
-  history:          DayRecord[];
-  setHistory:       React.Dispatch<React.SetStateAction<DayRecord[]>>;
-  familyName:       string;
-  familyCode:       string;
-  familyMembers:    FamilyMember[];
-  currentUserName:  string;
-  currentUserId:    string;
-  updateMember:     (id: string, updates: Partial<FamilyMember>) => void;
-  updateHistoryDay: (date: string, updater: (prev: FoodEntry[]) => FoodEntry[]) => void;
+  role:               Role;
+  setRole:            (r: Role) => void;
+  entries:            FoodEntry[];
+  setEntries:         React.Dispatch<React.SetStateAction<FoodEntry[]>>;
+  goals:              Goal[];
+  setGoals:           React.Dispatch<React.SetStateAction<Goal[]>>;
+  params:             NutrientParams;
+  setParams:          React.Dispatch<React.SetStateAction<NutrientParams>>;
+  ageGroup:           AgeGroup;
+  setAgeGroup:        (g: AgeGroup) => void;
+  history:            DayRecord[];
+  setHistory:         React.Dispatch<React.SetStateAction<DayRecord[]>>;
+  familyName:         string;
+  familyCode:         string;
+  familyMembers:      FamilyMember[];
+  familyNutrients:    Nutrient[];
+  setFamilyNutrients: (nutrients: Nutrient[]) => void;
+  setMemberAgeGroup:  (id: string, g: AgeGroup) => void;
+  currentUserName:    string;
+  currentUserId:      string;
+  updateMember:       (id: string, updates: Partial<FamilyMember>) => void;
+  updateHistoryDay:   (date: string, updater: (prev: FoodEntry[]) => FoodEntry[]) => void;
 }
 
 const Ctx = createContext<AppCtx | null>(null);
@@ -250,19 +253,23 @@ const DEMO_FAMILY_MEMBERS: FamilyMember[] = [
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
 
+// Default nutrients tracked family-wide
+const DEFAULT_FAMILY_NUTRIENTS: Nutrient[] = ['protein', 'fiber', 'vitamins'];
+
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [role,          setRole]          = useState<Role>('kid');
-  const [entries,       setEntries]       = useState<FoodEntry[]>(DEMO_ENTRIES);
-  const [goals,         setGoals]         = useState<Goal[]>(DEMO_GOALS);
-  const [history,       setHistory]       = useState<DayRecord[]>(DEMO_HISTORY);
-  const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>(DEMO_FAMILY_MEMBERS);
+  const [role,             setRole]             = useState<Role>('kid');
+  const [entries,          setEntries]          = useState<FoodEntry[]>(DEMO_ENTRIES);
+  const [goals,            setGoals]            = useState<Goal[]>(DEMO_GOALS);
+  const [history,          setHistory]          = useState<DayRecord[]>(DEMO_HISTORY);
+  const [familyMembers,    setFamilyMembers]    = useState<FamilyMember[]>(DEMO_FAMILY_MEMBERS);
+  const [familyNutrients,  setFamilyNutrientsState] = useState<Nutrient[]>(DEFAULT_FAMILY_NUTRIENTS);
 
   // Current user identity — role switch drives which member record is active
   const currentUserId   = role === 'parent' ? 'u4' : 'u1';
   const currentUserName = role === 'parent' ? 'Sarah' : 'Alex';
   const currentMember   = familyMembers.find(m => m.id === currentUserId)!;
 
-  // params and ageGroup are derived from the current user's member record
+  // params and ageGroup derived from the current user's member record
   const params   = currentMember.params;
   const ageGroup = currentMember.ageGroup;
 
@@ -270,7 +277,38 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setFamilyMembers(prev => prev.map(m => m.id === id ? { ...m, ...updates } : m));
   };
 
-  // setParams / setAgeGroup write through to the current user's member record
+  // Build a params object for a member based on which family nutrients are enabled
+  const paramsForMember = (ag: AgeGroup, enabled: Nutrient[], existingParams: NutrientParams, isAuto: boolean): NutrientParams =>
+    Object.fromEntries(NUTRIENTS.map(n => {
+      if (!enabled.includes(n)) return [n, 0];
+      // Auto members always use DRI; manual members keep their existing value or fall back to DRI
+      return [n, isAuto ? NUTRIENT_DRI[ag][n] : (existingParams[n] > 0 ? existingParams[n] : NUTRIENT_DRI[ag][n])];
+    })) as NutrientParams;
+
+  // Toggle a family nutrient on/off — updates every member simultaneously
+  const setFamilyNutrients = (nutrients: Nutrient[]) => {
+    const added   = nutrients.filter(n => !familyNutrients.includes(n));
+    const removed = familyNutrients.filter(n => !nutrients.includes(n));
+    setFamilyNutrientsState(nutrients);
+    if (added.length === 0 && removed.length === 0) return;
+    setFamilyMembers(prev => prev.map(m => {
+      const newParams = { ...m.params };
+      added.forEach(n => { newParams[n] = NUTRIENT_DRI[m.ageGroup][n]; });
+      removed.forEach(n => { newParams[n] = 0; });
+      return { ...m, params: newParams };
+    }));
+  };
+
+  // Change one member's age group — only updates enabled family nutrients
+  const setMemberAgeGroup = (id: string, g: AgeGroup) => {
+    setFamilyMembers(prev => prev.map(m => {
+      if (m.id !== id) return m;
+      const newParams = paramsForMember(g, familyNutrients, m.params, m.autoPreset);
+      return { ...m, ageGroup: g, params: newParams };
+    }));
+  };
+
+  // setParams writes through to the current user's member record
   const setParams: React.Dispatch<React.SetStateAction<NutrientParams>> = (action) => {
     setFamilyMembers(prev => prev.map(m => {
       if (m.id !== currentUserId) return m;
@@ -280,7 +318,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const setAgeGroup = (g: AgeGroup) => {
-    updateMember(currentUserId, { ageGroup: g, autoPreset: true, params: NUTRIENT_PRESETS[g] });
+    setMemberAgeGroup(currentUserId, g);
+    // also mark the current user as auto
+    setFamilyMembers(prev => prev.map(m => m.id === currentUserId ? { ...m, autoPreset: true } : m));
   };
 
   const updateHistoryDay = (date: string, updater: (prev: FoodEntry[]) => FoodEntry[]) => {
@@ -307,6 +347,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       familyName: 'The Gould Family',
       familyCode: 'GOULD-2024',
       familyMembers,
+      familyNutrients,
+      setFamilyNutrients,
+      setMemberAgeGroup,
       currentUserName,
       currentUserId,
       updateMember,
