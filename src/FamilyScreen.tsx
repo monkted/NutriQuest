@@ -454,8 +454,8 @@ export default function FamilyScreen() {
                 <TouchableOpacity style={fs.goalCardHeader} onPress={() => toggleGoal(goal.id)} activeOpacity={0.7}>
                   <View style={fs.goalCardLeft}>
                     <View style={fs.goalBadgeRow}>
-                      <View style={[fs.typeBadge, { backgroundColor: goal.type === 'group' ? '#5856D622' : '#FF950022' }]}>
-                        <Text style={[fs.typeBadgeText, { color: goal.type === 'group' ? '#5856D6' : '#FF9500' }]}>
+                      <View style={[fs.typeBadge, { backgroundColor: goal.type === 'group' ? '#5856D622' : '#007AFF22' }]}>
+                        <Text style={[fs.typeBadgeText, { color: goal.type === 'group' ? '#5856D6' : '#007AFF' }]}>
                           {goal.type === 'group' ? '👨‍👩 Group' : '⭐ Individual'}
                         </Text>
                       </View>
@@ -517,8 +517,8 @@ export default function FamilyScreen() {
         {showPastGoals && LAST_WEEK_GOALS.map(pg => (
           <View key={pg.id} style={[fs.pastGoalCard, pg.complete && fs.pastGoalComplete]}>
             <View style={fs.pastGoalTop}>
-              <View style={[fs.typeBadge, { backgroundColor: pg.type === 'group' ? '#5856D622' : '#FF950022' }]}>
-                <Text style={[fs.typeBadgeText, { color: pg.type === 'group' ? '#5856D6' : '#FF9500' }]}>
+              <View style={[fs.typeBadge, { backgroundColor: pg.type === 'group' ? '#5856D622' : '#007AFF22' }]}>
+                <Text style={[fs.typeBadgeText, { color: pg.type === 'group' ? '#5856D6' : '#007AFF' }]}>
                   {pg.type === 'group' ? '👨‍👩 Group' : '⭐ Individual'}
                 </Text>
               </View>
@@ -565,7 +565,7 @@ export default function FamilyScreen() {
 
             <Text style={fs.fieldLabel}>Goal Type</Text>
             <View style={fs.typeRow}>
-              <TouchableOpacity style={[fs.typeChip, fType === 'individual' && { backgroundColor: '#FF9500' }]} onPress={() => setFType('individual')}>
+              <TouchableOpacity style={[fs.typeChip, fType === 'individual' && { backgroundColor: '#007AFF' }]} onPress={() => setFType('individual')}>
                 <Text style={[fs.typeChipText, fType === 'individual' && { color: '#fff' }]}>⭐ Individual</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[fs.typeChip, fType === 'group' && { backgroundColor: '#5856D6' }]} onPress={() => setFType('group')}>

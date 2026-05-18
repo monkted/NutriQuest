@@ -209,8 +209,8 @@ export default function LeaderboardScreen() {
                 <View key={goal.id} style={[lb.goalCard, complete && lb.goalCardComplete]}>
                   <View style={lb.goalTop}>
                     <View style={lb.goalTitleRow}>
-                      <View style={[lb.goalTypeBadge, { backgroundColor: goal.type === 'group' ? '#5856D622' : '#FF950022' }]}>
-                        <Text style={[lb.goalTypeBadgeText, { color: goal.type === 'group' ? '#5856D6' : '#FF9500' }]}>
+                      <View style={[lb.goalTypeBadge, { backgroundColor: goal.type === 'group' ? '#5856D622' : '#007AFF22' }]}>
+                        <Text style={[lb.goalTypeBadgeText, { color: goal.type === 'group' ? '#5856D6' : '#007AFF' }]}>
                           {goal.type === 'group' ? '👨‍👩 Group' : '⭐ Individual'}
                         </Text>
                       </View>
@@ -296,7 +296,7 @@ const lb = StyleSheet.create({
   goalPctText:       { fontSize: 13, fontWeight: '700', color: DARK, width: 40, textAlign: 'right' },
   goalPtsRow:        { flexDirection: 'row', justifyContent: 'space-between' },
   goalPtsLabel:      { fontSize: 13, color: '#8E8E93' },
-  goalPtsRemaining:  { fontSize: 13, fontWeight: '700', color: '#FF9500' },
+  goalPtsRemaining:  { fontSize: 13, fontWeight: '700', color: '#007AFF' },
 
   noGoals:      { alignItems: 'center', paddingVertical: 48, paddingHorizontal: 32 },
   noGoalsEmoji: { fontSize: 48, marginBottom: 12 },

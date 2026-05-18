@@ -19,6 +19,12 @@ import { analyzeImageWithClaude, lookupBarcode, FoodAnalysis } from './claudeFoo
 // ─── One-shot animation flag (persists across tab switches within same session) ─
 let _homeAnimPlayed = false;
 
+// ─── Design tokens ────────────────────────────────────────────────────────────
+
+const YELLOW = '#FFD60A';
+const BG     = '#F5F5F5';
+const DARK   = '#1C1C1E';
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const MEALS: Meal[] = ['Breakfast', 'Lunch', 'Dinner', 'Snacks'];
@@ -33,21 +39,14 @@ const AnimCircle = Animated.createAnimatedComponent(Circle);
 
 // ─── Circular Progress ────────────────────────────────────────────────────────
 
-function CircularProgress({ size, progress, color, strokeWidth = 6, outerRingColor, children }: {
-  size: number; progress: number; color: string; strokeWidth?: number; outerRingColor?: string; children?: React.ReactNode;
+function CircularProgress({ size, progress, color, strokeWidth = 6, children }: {
+  size: number; progress: number; color: string; strokeWidth?: number; children?: React.ReactNode;
 }) {
   const r      = (size - strokeWidth) / 2;
   const cx     = size / 2;
   const circ   = 2 * Math.PI * r;
   const pct    = Math.min(Math.max(progress, 0), 1);
   const target = circ * (1 - pct);
-
-  // Outer ring: extends beyond the container via negative absolute offset
-  // so the wrapper size stays at `size` with no layout shift.
-  const RING_GAP    = 10;
-  const ringSvgSize = size + RING_GAP * 2;
-  const ringR       = (ringSvgSize - 4) / 2;
-  const ringCx      = ringSvgSize / 2;
 
   const offsetAnim  = useRef(new Animated.Value(_homeAnimPlayed ? target : circ)).current;
   const mountedRef  = useRef(false);
@@ -69,14 +68,6 @@ function CircularProgress({ size, progress, color, strokeWidth = 6, outerRingCol
 
   return (
     <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
-      {outerRingColor && (
-        <Svg
-          width={ringSvgSize} height={ringSvgSize}
-          style={{ position: 'absolute', top: -RING_GAP, left: -RING_GAP }}
-        >
-          <Circle cx={ringCx} cy={ringCx} r={ringR} stroke={outerRingColor} strokeWidth={3} fill="none" />
-        </Svg>
-      )}
       <Svg width={size} height={size} style={{ position: 'absolute' }}>
         <Circle cx={cx} cy={cx} r={r} stroke="#EFEFEF" strokeWidth={strokeWidth} fill="none" />
         <AnimCircle cx={cx} cy={cx} r={r} stroke={color} strokeWidth={strokeWidth} fill="none"
@@ -88,6 +79,28 @@ function CircularProgress({ size, progress, color, strokeWidth = 6, outerRingCol
     </View>
   );
 }
+
+// ─── Flame Streak ─────────────────────────────────────────────────────────────
+
+function FlameStreak({ streak, best }: { streak: number; best: number }) {
+  return (
+    <View style={sf.card}>
+      <View style={sf.topRow}>
+        <Text style={sf.emoji}>🔥</Text>
+        <Text style={sf.num}>{streak}</Text>
+      </View>
+      <Text style={sf.best}>Best: {best} days</Text>
+    </View>
+  );
+}
+
+const sf = StyleSheet.create({
+  card:   { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFBEB', borderRadius: 16, paddingVertical: 10, paddingHorizontal: 11, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 5, shadowOffset: { width: 0, height: 1 }, elevation: 2, borderWidth: 1.5, borderColor: YELLOW },
+  topRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  emoji:  { fontSize: 22 },
+  num:    { fontSize: 24, fontWeight: '900', color: '#FF7A00' },
+  best:   { fontSize: 10, fontWeight: '600', color: '#C9A600', marginTop: 3 },
+});
 
 // ─── Bounce-on-press wrapper ──────────────────────────────────────────────────
 
@@ -399,10 +412,13 @@ export default function HomeScreen() {
               <Text style={s.pointsVal}>{dispWeek}<Text style={s.pointsPts}> pts</Text></Text>
             </Animated.View>
           </View>
+
+          <FlameStreak streak={7} best={12} />
+
           <View style={[s.pointsCard, s.pointsCardAccent]}>
             <Text style={s.pointsLabel}>Today</Text>
             <Animated.View style={{ transform: [{ scale: heroScale }], alignSelf: 'flex-start' }}>
-              <Text style={[s.pointsVal, { color: '#FF9500' }]}>{dispToday}<Text style={s.pointsPts}> pts</Text></Text>
+              <Text style={[s.pointsVal, { color: '#007AFF' }]}>{dispToday}<Text style={s.pointsPts}> pts</Text></Text>
             </Animated.View>
           </View>
         </View>
@@ -412,28 +428,26 @@ export default function HomeScreen() {
         {NUTRIENTS.some(n => params[n] > 0) ? (
           <View style={s.nutrientGrid}>
             {NUTRIENTS.filter(n => params[n] > 0).map(n => {
-              const val       = (totals as any)[n] as number;
-              const pct       = Math.min(val / params[n], 1);
-              const met       = pct >= 1;
-              const partial   = pct >= 0.7;
-              const pctNum    = Math.round(pct * 100);
-              const isPerct   = N_UNIT[n] === '%';
-              const ringColor = met ? '#34C759' : partial ? '#C9A600' : '#D1D1D6';
-              const subtitle  = met
-                ? '✓ Done'
-                : partial
-                  ? 'Partially done'
-                  : 'No credit';
-              const subColor  = met ? '#34C759' : partial ? '#FF9500' : '#AEAEB2';
+              const val      = (totals as any)[n] as number;
+              const pct      = Math.min(val / params[n], 1);
+              const met      = pct >= 1;
+              const partial  = pct >= 0.7;
+              const pctNum   = Math.round(pct * 100);
+              const isPerct  = N_UNIT[n] === '%';
+              const tierColor = met ? '#34C759' : partial ? '#C9A600' : DARK;
+              const subtitle  = met ? '✓ Done' : partial ? 'Partially done' : 'No credit';
+              const subColor  = met ? '#34C759' : partial ? '#C9A600' : '#AEAEB2';
               const valLine   = isPerct ? `${val} / 100%` : `${val} / ${params[n]}g`;
               return (
                 <View key={n} style={nc.wrapper}>
-                  <CircularProgress size={88} progress={pct} color={N_COLOR[n]} strokeWidth={7} outerRingColor={ringColor}>
+                  <CircularProgress size={88} progress={pct} color={N_COLOR[n]} strokeWidth={7}>
                     <Text style={nc.emoji}>{N_EMOJI[n]}</Text>
                     {met ? (
-                      <Text style={nc.check}>✓</Text>
+                      <Text style={nc.bigCheck}>✓</Text>
                     ) : (
-                      <Text style={nc.val}>{pctNum}<Text style={nc.unit}>%</Text></Text>
+                      <Text style={[nc.val, { color: tierColor }]}>
+                        {pctNum}<Text style={[nc.unit, { color: tierColor }]}>%</Text>
+                      </Text>
                     )}
                   </CircularProgress>
                   <Text style={nc.label}>{N_LABEL[n]}</Text>
@@ -458,12 +472,12 @@ export default function HomeScreen() {
               {goals.map(goal => {
                 const progress = Math.min(weekPts / goal.weeklyPointsTarget, 1);
                 const complete = weekPts >= goal.weeklyPointsTarget;
-                const ringColor = complete ? '#34C759' : goal.type === 'group' ? '#5856D6' : '#FF9500';
+                const ringColor = complete ? '#34C759' : goal.type === 'group' ? '#5856D6' : '#007AFF';
                 return (
                   <View key={goal.id} style={[gm.card, complete && gm.cardComplete]}>
                     <View style={gm.topRow}>
-                      <View style={[gm.typeBadge, { backgroundColor: goal.type === 'group' ? '#5856D622' : '#FF950022' }]}>
-                        <Text style={[gm.typeBadgeText, { color: goal.type === 'group' ? '#5856D6' : '#FF9500' }]}>
+                      <View style={[gm.typeBadge, { backgroundColor: goal.type === 'group' ? '#5856D622' : '#007AFF22' }]}>
+                        <Text style={[gm.typeBadgeText, { color: goal.type === 'group' ? '#5856D6' : '#007AFF' }]}>
                           {goal.type === 'group' ? '👨‍👩 Group' : '⭐ Individual'}
                         </Text>
                       </View>
@@ -773,10 +787,6 @@ function Chip({ label, bg }: { label: string; bg: string }) {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const YELLOW = '#FFD60A';
-const BG     = '#F5F5F5';
-const DARK   = '#1C1C1E';
-
 const s = StyleSheet.create({
   root:         { flex: 1, backgroundColor: BG },
   header:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#fff', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 14 },
@@ -789,11 +799,11 @@ const s = StyleSheet.create({
   dateRow:      { paddingHorizontal: 14, gap: 8 },
 
   pointsRow:        { flexDirection: 'row', paddingHorizontal: 16, paddingTop: 14, gap: 10 },
-  pointsCard:       { flex: 1, backgroundColor: '#fff', borderRadius: 16, padding: 14, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 5, shadowOffset: { width: 0, height: 1 }, elevation: 2 },
-  pointsCardAccent: { borderWidth: 1.5, borderColor: '#FFE066' },
-  pointsLabel:      { fontSize: 12, fontWeight: '600', color: '#8E8E93', marginBottom: 4 },
-  pointsVal:        { fontSize: 26, fontWeight: '800', color: DARK },
-  pointsPts:        { fontSize: 13, fontWeight: '500', color: '#8E8E93' },
+  pointsCard:       { flex: 1, backgroundColor: '#fff', borderRadius: 16, paddingVertical: 10, paddingHorizontal: 11, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 5, shadowOffset: { width: 0, height: 1 }, elevation: 2 },
+  pointsCardAccent: { borderWidth: 1.5, borderColor: '#007AFF' },
+  pointsLabel:      { fontSize: 11, fontWeight: '600', color: '#8E8E93', marginBottom: 3 },
+  pointsVal:        { fontSize: 20, fontWeight: '800', color: DARK },
+  pointsPts:        { fontSize: 11, fontWeight: '500', color: '#8E8E93' },
 
   sectionLabel:   { fontSize: 17, fontWeight: '700', color: DARK, marginHorizontal: 16, marginTop: 18, marginBottom: 12 },
   noTargetsWrap:  { marginHorizontal: 16, marginBottom: 8, backgroundColor: '#fff', borderRadius: 16, padding: 20, alignItems: 'center' },
@@ -860,26 +870,26 @@ const s = StyleSheet.create({
 // Date squares
 const ds = StyleSheet.create({
   square:            { width: 52, height: 52, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff', shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 1, gap: 2 },
-  squareSelected:    { backgroundColor: DARK },
+  squareSelected:    { borderWidth: 2, borderColor: YELLOW },
   letter:            { fontSize: 9, fontWeight: '600', color: '#8E8E93' },
-  letterSelected:    { color: 'rgba(255,255,255,0.6)' },
+  letterSelected:    { color: '#8E8E93' },
   num:               { fontSize: 17, fontWeight: '800', color: DARK },
-  numSelected:       { color: '#fff' },
+  numSelected:       { color: DARK },
   dot:               { width: 5, height: 5, borderRadius: 2.5, backgroundColor: 'transparent' },
   dotActive:         { backgroundColor: YELLOW },
-  dotSelectedActive: { backgroundColor: '#FFD60A' },
+  dotSelectedActive: { backgroundColor: DARK },
 });
 
 // Nutrient circles
 const nc = StyleSheet.create({
-  wrapper: { width: '30%', alignItems: 'center', marginBottom: 8 },
-  emoji:   { fontSize: 17, marginBottom: 1 },
-  val:     { fontSize: 17, fontWeight: '800', color: '#1C1C1E' },
-  unit:    { fontSize: 10, fontWeight: '600', color: '#8E8E93' },
-  check:   { fontSize: 18, color: '#34C759', fontWeight: '800' },
-  label:   { fontSize: 11, fontWeight: '700', color: '#8E8E93', marginTop: 7 },
-  sub:     { fontSize: 10, fontWeight: '700', marginTop: 2 },
-  valLine: { fontSize: 9,  fontWeight: '500', color: '#AEAEB2', marginTop: 1 },
+  wrapper:     { width: '30%', alignItems: 'center', marginBottom: 8 },
+  emoji:       { fontSize: 17, marginBottom: 1 },
+  val:         { fontSize: 17, fontWeight: '800', color: '#1C1C1E' },
+  unit:        { fontSize: 10, fontWeight: '600', color: '#8E8E93' },
+  bigCheck:    { fontSize: 18, fontWeight: '800', color: '#34C759' },
+  label:       { fontSize: 11, fontWeight: '700', color: '#8E8E93', marginTop: 7 },
+  sub:         { fontSize: 10, fontWeight: '700', marginTop: 2 },
+  valLine:     { fontSize: 9,  fontWeight: '500', color: '#AEAEB2', marginTop: 1 },
 });
 
 // Goal circles
